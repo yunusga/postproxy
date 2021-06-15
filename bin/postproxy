@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+
+const cli = require('commander');
+const pkg = require('../package.json');
+
+const { log } = console;
+
+
+/**
+ * Help and information
+ */
+cli
+  .version(pkg.version, '-v, --version')
+  .description(pkg.description)
+  .on('--help', () => {
+    log(`\nCommands help:\n  ${pkg.name} [command] --help`);
+    log(`\nSource:  ${__filename}`);
+    log(`Version: ${pkg.version}`);
+  });
+
+
+/**
+ * Initialization
+ */
+cli
+  .command('init [dir]')
+  .description('Initialize new postproxy project')
+  .action((dir) => {
+    require('../commands/init')(dir);
+  });
+
+/**
+ * Start proxy server
+ */
+cli
+  .command('start')
+  .description('Start proxy server')
+  .action(() => {
+    require('../commands/start');
+  });
+
+/**
+ * Parse CLI arguments
+ */
+cli.parse(process.argv);
+
+/**
+ * Show help info if no arguments
+ */
+if (!process.argv.slice(2).length) {
+  cli.help();
+}
