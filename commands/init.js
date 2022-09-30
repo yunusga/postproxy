@@ -1,20 +1,23 @@
-const fs = require('fs');
-const readline = require('readline-sync');
-
+const { existsSync, readdirSync } = require('fs');
 const { join } = require('path');
-const { task, src, dest, series } = require('gulp');
 const { log } = console;
-const { bold, green, black, bgYellow, bgRed } = require('colorette');
 
-module.exports = (dir) => {
+const {
+  bold, bgRed, green,
+} = require('picocolors');
 
-  task('copy:boilerplate', (done) => {
-    log(`${bold(green('[postproxy]'))} copy boilerplate`);
+const gulp = require('gulp');
 
-    const boilerplate = join(__dirname.replace('commands', ''), 'boilerplate', '**', '*');
+module.exports = (dir, opts) => {
 
-    const stream = src(boilerplate, { dot: true })
-      .pipe(dest(join(process.cwd(), dir)));
+  gulp.task('copy:boilerplate', (done) => {
+    log(`${bold(green('[postproxy]'))} copy:boilerplate`);
+
+    const stream = gulp.src(
+      join(__dirname.replace('commands', ''), 'boilerplate', '**', '*'),
+      { dot: true },
+    )
+      .pipe(gulp.dest(join(process.cwd(), dir)));
 
     stream.on('end', () => {
       done();
@@ -23,25 +26,19 @@ module.exports = (dir) => {
 
   dir = dir || '';
 
-  const dirExists = dir.length && fs.existsSync(dir);
-  const notEmpty = dirExists || !dir.length ? fs.readdirSync(join(process.cwd(), dir)).length : false;
-  const hasPostProxy = fs.existsSync(join(dir, '.postproxy'));
+  const isDirExists = dir.length && existsSync(dir);
+  const isNotEmpty = isDirExists || !dir.length ? readdirSync(join(process.cwd(), dir)).length : false;
+  const hasPostProxy = existsSync(join(dir, 'postproxy.config.js'));
 
   if (hasPostProxy) {
-    log(`${bgRed(' ERROR ')} postproxy project has already initialized in ${join(process.cwd(), dir)}`);
+    log(`${bgRed('[error]')} project is already initialized`);
     process.exit(0);
   }
 
-  if (notEmpty) {
-    log(`${bgYellow(black(' WARN '))} Directory is not empty. Some files may be overwritten. Continue?`);
-
-    const agree = readline.question('(yes|no):');
-
-    if (agree !== 'yes') {
-      log(`${bgRed(' ERROR ')} initialization aborted`);
-      process.exit(0);
-    }
+  if (isNotEmpty) {
+    log(`${bgRed('[error]')} directory is not empty`);
+    process.exit(0);
   }
 
-  series('copy:boilerplate')();
-}
+  gulp.series('copy:boilerplate')();
+};

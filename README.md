@@ -5,5 +5,3 @@
 ## License
 
 [MIT](LICENSE)
-
-Logotype made by <a href="https://www.flaticon.com/authors/xnimrodx" title="xnimrodx" target="_blank" rel="noopener">xnimrodx</a> from <a target="_blank" rel="noopener" href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>

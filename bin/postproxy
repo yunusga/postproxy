@@ -1,52 +1,42 @@
 #!/usr/bin/env node
 
-const cli = require('commander');
-const pkg = require('../package.json');
+const { program } = require('commander');
+const { name, version, description } = require('../package.json');
 
 const { log } = console;
 
-
-/**
- * Help and information
- */
-cli
-  .version(pkg.version, '-v, --version')
-  .description(pkg.description)
+// Setup additional HELP information
+program
+  .version(version, '-v, --version')
+  .description(description)
   .on('--help', () => {
-    log(`\nCommands help:\n  ${pkg.name} [command] --help`);
-    log(`\nSource:  ${__filename}`);
-    log(`Version: ${pkg.version}`);
+    log(`\nCommands help:\n  ${name} [command] --help`);
+    log(`\nVersion:\n  ${version}`);
+    log(`Source files:\n  ${__filename}`);
   });
 
-
-/**
- * Initialization
- */
-cli
-  .command('init [dir]')
-  .description('Initialize new postproxy project')
-  .action((dir) => {
-    require('../commands/init')(dir);
+// Init new project
+program
+  .command('init [dirName]')
+  .description('Initialize new project')
+  .action((dirName, opts) => {
+    require('../commands/init')(dirName, opts);
   });
 
-/**
- * Start proxy server
- */
-cli
+// Start proxy server
+program
   .command('start')
   .description('Start proxy server')
-  .action(() => {
-    require('../commands/start');
+  .option('-a, --auth [user@password]', 'set user@password for authorization')
+  .action((dev) => {
+    require('../commands/start')(dev);
   });
 
-/**
- * Parse CLI arguments
- */
-cli.parse(process.argv);
+// Parse CLI arguments
+program.parse(process.argv);
 
-/**
- * Show help info if no arguments
- */
+// If no args SHUTDOWN and show HELP information
 if (!process.argv.slice(2).length) {
-  cli.help();
+  program.help();
+  process.exit(1);
 }

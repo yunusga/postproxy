@@ -1,4 +1,3 @@
-const path = require('path');
 const { join } = require('path');
 /**
  * Project directories structure
@@ -10,10 +9,10 @@ const paths = {
 
 const styles = {
   watch: [
-    join('.', paths.source, '**', '*.{styl,scss}'),
+    join('.', paths.source, '**', '*.styl'),
   ],
   src: [
-    join(paths.source, '*.{styl,scss}'),
+    join(paths.source, '*.styl'),
   ],
   dest: paths.dist,
 };
@@ -36,17 +35,14 @@ const postcss = {
     'inline-svg': null,
     'momentum-scrolling': null,
   },
-  autoprefixer: [
-    'last 2 versions',
-  ],
 };
 
 /**
  * Browsersync paths
  * @link https://browsersync.io/docs/options
  */
-const browserSync = {
-  proxy: 'https://github.com/solversgroup/postproxy',
+const proxy = {
+  proxy: 'https://github.com/yunusga/postproxy',
   port: 9000,
   serveStatic: ['./'],
   watch: false,
@@ -54,24 +50,25 @@ const browserSync = {
   ui: false,
   open: false,
   notify: true,
-  logLevel: 'info',
-  logPrefix: 'Postproxy',
+  logLevel: 'debug',
+  logPrefix: 'postproxy',
   snippetOptions: {
+    // https://browsersync.io/docs/options#option-rewriteRules
     rule: {
       match: /<\/head>/i,
       fn: (snippet, match) => {
         const css = `<link rel="stylesheet" type="text/css" href="/${paths.dist}/app.css">`;
-        return css + snippet + match;
+        return css + match + snippet;
       }
     }
   },
-  // https://browsersync.io/docs/options#option-rewriteRules
+
 };
 
 module.exports = {
-  browserSync,
+  proxy,
   paths,
-  postcss,
-  scripts,
   styles,
+  scripts,
+  postcss,
 };

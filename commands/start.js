@@ -1,117 +1,162 @@
-const fs = require('fs');
-
+const { existsSync, writeFileSync } = require('fs');
+const { join } = require('path');
 const { log } = console;
-const { task, src, dest, series } = require('gulp');
-const { bgRed } = require('colorette');
 
+const {
+  bold, green, red, yellow, bgRed,
+} = require('picocolors');
 
-const configPath = `${process.cwd()}/postproxy.config`;
+const pkg = require('../package.json');
+const auth = require('../modules/auth');
+const proxy = require('browser-sync').create('Proxy Server');
 
-if (!fs.existsSync(`${configPath}.js`)) {
-  log(`${bgRed(' ERROR ')} postproxy.config.js Not Found in ${process.cwd()}`);
-  process.exit(1);
-}
-
-const opts = require(configPath);
-
-const gif = require('gulp-if');
-const chokidar = require('chokidar');
+const gulp = require('gulp');
+const concat = require('gulp-concat');
+const babel = require('gulp-babel');
 const plumber = require('gulp-plumber');
-const rename = require('gulp-rename');
 
-/**
- * Proxy server
- ============================================= */
-const bs = require('browser-sync').create('postproxy-dev');
+module.exports = (opts) => {
+  const configPath = join(process.cwd(), 'postproxy.config.js');
+  const hasPostProxy = existsSync(configPath);
 
-task('proxy:server', (done) => {
-  bs.init(opts.browserSync, () => {
-    done();
-  });
-});
-
-/**
- * Styles
- ============================================= */
-const postcss = require('gulp-postcss');
-const stylus = require('gulp-stylus');
-const sass = require('gulp-sass');
-const sassGlob = require('gulp-sass-glob');
-const autoprefixer = require('autoprefixer');
-
-const plugins = [];
-
-Object.keys(opts.postcss.plugins).forEach(key => {
-  const options = opts.postcss.plugins[key];
-
-  if (options) {
-    plugins.push(require(`postcss-${key}`)(options));
+  if (!hasPostProxy) {
+    log(`${red('[error]')} ${yellow('postproxy.config.js')} not found`);
+    process.exit(0);
   }
-});
 
-plugins.push(autoprefixer(opts.postcss.autoprefixer));
+  const config = require(configPath);
+  const browserslistrcPath = join(process.cwd(), '.browserslistrc');
 
-task('proxy:styles', (done) => {
-  const stream = src(opts.styles.src)
-    .pipe(gif('*.styl', stylus({
-      'include css': true,
-    })))
-    .pipe(plumber({
-      errorHandler: (error) => {
-        log(`Error in styles ${error.plugin}`);
-        log(error.toString());
-      },
-    }))
-    .pipe(gif('*.scss', sassGlob()))
-    .pipe(gif('*.scss', sass()))
-    .pipe(gif('*.sass', sass({
-      indentedSyntax: true,
-    })))
-    .pipe(postcss(plugins, { from: undefined }))
-    .pipe(rename({
-      dirname: '',
-    }))
-    .pipe(bs.stream())
-    .pipe(dest(opts.styles.dest));
+  if (!existsSync(browserslistrcPath)) {
+    log(`${red('[error]')} ${yellow('.browserslistrc')} not found`);
+    process.exit(0);
+  }
 
-  stream.on('end', () => {
-    log('[styles] done');
+  process.env.BROWSERSLIST_CONFIG = browserslistrcPath;
+
+  /**
+   * Proxy Auth
+   */
+  proxy.use(require('bs-auth'), {
+    user: auth(opts.auth, pkg.name)[0],
+    pass: auth(opts.auth, pkg.name)[1],
+    use: opts.auth,
+  });
+
+  /**
+   * Styles
+   */
+  gulp.task('styles', (done) => {
+    const postcss = require('gulp-postcss');
+    const flexBugsFixes = require('postcss-flexbugs-fixes');
+    const momentumScrolling = require('postcss-momentum-scrolling');
+    const easingGradients = require('postcss-easing-gradients');
+    const combineAndSortMQ = require('postcss-sort-media-queries');
+    const inlineSvg = require('postcss-inline-svg');
+
+    const autoprefixer = require('autoprefixer');
+    const stylus = require('../modules/gulp/stylus');
+
+    gulp.src(config.styles.src)
+      .pipe(plumber({
+        errorHandler: (error) => {
+          console.error(`Ошибка: проверьте стили ${error.plugin}`);
+          console.error(error.toString());
+
+          proxy.sockets.emit('error:message', error);
+        },
+      }))
+      .pipe(stylus({
+        'include css': true,
+      }))
+      .pipe(postcss([
+        combineAndSortMQ(),
+        momentumScrolling(),
+        flexBugsFixes(),
+        inlineSvg(),
+        easingGradients(),
+        autoprefixer(),
+      ], { from: undefined }))
+      .pipe(gulp.dest(config.paths.dist))
+      .pipe(proxy.stream());
+
     done();
   });
 
-  stream.on('error', (err) => {
-    log('[styles] error');
-    done(err);
+  /**
+   * Scripts
+   */
+  gulp.task('scripts', (done) => {
+    let hasError = false;
+
+    const stream = gulp.src(config.scripts.src)
+      .pipe(plumber({
+        errorHandler: (error) => {
+          proxy.sockets.emit('error:message', error);
+          hasError = true;
+
+          log(`${red('[error]')} error in scripts ${error.plugin}`);
+          log(`${red('[error]')} ${error.message}`);
+        },
+      }))
+      .pipe(babel({
+        presets: ['@babel/preset-env'].map(require.resolve),
+        plugins: ['@babel/plugin-transform-object-assign'].map(require.resolve),
+      }))
+      .pipe(concat('app.js'))
+      .pipe(gulp.dest(config.paths.dist));
+
+    stream.on('end', () => {
+      if (!hasError) {
+        log(`${green('[scripts]')} ${bold(green('done'))}`);
+        proxy.reload();
+      }
+
+      done();
+    });
+
+    stream.on('error', (error) => {
+      proxy.sockets.emit('error:message', error);
+      log(`${red('[error]')} error in script\n${error}`);
+      done(error);
+    });
   });
-});
 
-/**
- * Scripts
- ============================================= */
-task('proxy:scripts', (done) => {
-  done();
-});
+  gulp.task('watch', (done) => {
+    const watchOpts = {
+      ignoreInitial: true,
+      ignored: [
+        join(process.cwd(),'**', '*.db'),
+        join(process.cwd(), '**', '*tmp*')
+      ],
+      usePolling: false,
+      cwd: process.cwd(),
+    };
 
-/**
- * Watch
- ============================================= */
-task('watcher', (done) => {
-  // styles
-  const watchStyles = chokidar.watch(opts.styles.watch, { ignoreInitial: false });
+    /* Styles */
+    gulp.watch(
+      config.styles.watch,
+      watchOpts,
+      gulp.parallel('styles')
+    );
 
-  watchStyles.on('all', () => {
-    series('proxy:styles')();
+    /* Scripts */
+    gulp.watch(
+      config.scripts.watch,
+      watchOpts,
+      gulp.parallel('scripts'),
+    );
+
+    done();
   });
 
-  // scripts
-  const watchScripts = chokidar.watch(opts.scripts.watch, { ignoreInitial: false });
+  gulp.task('proxy-server', (done) => {
+    proxy.use(require('../modules/browser-sync/screen-message'));
 
-  watchScripts.on('all', () => {
-    series('proxy:scripts')();
+    proxy.init(config.proxy, () => {
+      done();
+    });
   });
 
-
-  done();
-});
-
-series('proxy:styles', 'watcher', 'proxy:server')();
+  gulp.series('watch', 'scripts', 'styles', 'proxy-server')();
+}
