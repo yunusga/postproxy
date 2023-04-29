@@ -11,25 +11,24 @@ program
   .description(description)
   .on('--help', () => {
     log(`\nCommands help:\n  ${name} [command] --help`);
-    log(`\nVersion:\n  ${version}`);
-    log(`Source files:\n  ${__filename}`);
+    log(`\nVersion: ${version}`);
+    log(`Source:  ${__filename}`);
   });
 
 // Init new project
 program
-  .command('init [dirName]')
-  .description('Initialize new project')
-  .action((dirName, opts) => {
-    require('../commands/init')(dirName, opts);
+  .command('init [dirname]')
+  .description('Initialize new postproxy project')
+  .action((dirname) => {
+    require('../commands/init')(dirname);
   });
 
 // Start proxy server
 program
   .command('start')
-  .description('Start proxy server')
-  .option('-a, --auth [user@password]', 'set user@password for authorization')
-  .action((dev) => {
-    require('../commands/start')(dev);
+  .description('Start postproxy server')
+  .action(() => {
+    require('../commands/start')();
   });
 
 // Parse CLI arguments
@@ -38,5 +37,4 @@ program.parse(process.argv);
 // If no args SHUTDOWN and show HELP information
 if (!process.argv.slice(2).length) {
   program.help();
-  process.exit(1);
 }

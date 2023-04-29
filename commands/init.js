@@ -1,44 +1,36 @@
-const { existsSync, readdirSync } = require('fs');
+const { existsSync, readdirSync, cpSync } = require('fs');
 const { join } = require('path');
-const { log } = console;
 
 const {
-  bold, bgRed, green,
+  bold, green, yellow, bgRed,
 } = require('picocolors');
 
-const gulp = require('gulp');
+const { log } = console;
 
-module.exports = (dir, opts) => {
+module.exports = (directory) => {
+  directory = directory || '';
 
-  gulp.task('copy:boilerplate', (done) => {
-    log(`${bold(green('[postproxy]'))} copy:boilerplate`);
+  const isDirExists = directory.length && existsSync(directory);
+  const isNotEmpty = isDirExists || !directory.length ? readdirSync(join(process.cwd(), directory)).length : false;
+  const hasPostproxy = existsSync(join(directory, 'postproxy.config.js'));
 
-    const stream = gulp.src(
-      join(__dirname.replace('commands', ''), 'boilerplate', '**', '*'),
-      { dot: true },
-    )
-      .pipe(gulp.dest(join(process.cwd(), dir)));
-
-    stream.on('end', () => {
-      done();
-    });
-  });
-
-  dir = dir || '';
-
-  const isDirExists = dir.length && existsSync(dir);
-  const isNotEmpty = isDirExists || !dir.length ? readdirSync(join(process.cwd(), dir)).length : false;
-  const hasPostProxy = existsSync(join(dir, 'postproxy.config.js'));
-
-  if (hasPostProxy) {
-    log(`${bgRed('[error]')} project is already initialized`);
+  if (hasPostproxy) {
+    log(`${bgRed(' ERROR ')} ${bold(yellow('postproxy'))} project is already initialized`);
     process.exit(0);
   }
 
   if (isNotEmpty) {
-    log(`${bgRed('[error]')} directory is not empty`);
+    log(`${bgRed(' ERROR ')} directory is not empty`);
     process.exit(0);
   }
 
-  gulp.series('copy:boilerplate')();
-};
+  cpSync(
+    join(__dirname.replace('commands', ''), 'boilerplate'),
+    join(process.cwd(), directory),
+    {
+      recursive: true,
+    }
+  );
+
+  log(`${bold(green('[postproxy]'))} initialized, type ${bold(yellow('postproxy'))} -h for help`);
+}
