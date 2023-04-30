@@ -1,12 +1,11 @@
-const { existsSync, writeFileSync } = require('fs');
+const { existsSync } = require('fs');
 const { join } = require('path');
 const { log } = console;
 
 const {
-  bold, green, red, yellow, bgRed,
+  red, yellow,
 } = require('picocolors');
 
-const pkg = require('../package.json');
 const proxy = require('browser-sync').create('Proxy Server');
 
 module.exports = () => {
@@ -22,10 +21,10 @@ module.exports = () => {
 
   proxy.init(config.proxy);
 
-  proxy.watch('./src/*.css').on('change', () => {
+  proxy.watch('./**/*.css').on('change', () => {
     // Since 2.6.0 - wildcards to reload ALL css files
     proxy.reload("*.css");
   });
 
-  proxy.watch('./src/*.js').on('change', proxy.reload);
+  proxy.watch('./**/*.js').on('change', proxy.reload);
 }

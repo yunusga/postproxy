@@ -16,12 +16,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/solversgroup/postproxy.git"
+    "url": "https://github.com/yunusga/postproxy.git"
   },
-  "homepage": "https://github.com/solversgroup/postproxy",
+  "homepage": "https://github.com/yunusga/postproxy",
   "bugs": {
-    "url": "https://github.com/solversgroup/postproxy/issues",
-    "email": "opensource@solvers.group"
+    "url": "https://github.com/yunusga/postproxy/issues",
+    "email": "yunusga@yandex.com"
   },
   "preferGlobal": true,
   "engines": {
