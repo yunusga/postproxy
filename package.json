@@ -37,10 +37,10 @@
     "refresh-deps": "rm -rf node_modules/ && rm -f package-lock.json && npm i"
   },
   "dependencies": {
-    "browser-sync": "^2.29.1",
+    "browser-sync": "^3.0.4",
     "bs-auth": "^1.2.0",
-    "chokidar": "^3.5.3",
-    "commander": "^10.0.1",
-    "picocolors": "^1.0.0"
+    "chokidar": "^5.0.0",
+    "commander": "^14.0.2",
+    "picocolors": "^1.1.1"
   }
 }
